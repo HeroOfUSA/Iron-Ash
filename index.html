@@ -53,7 +53,7 @@ function move(e,dx,dy){if(!blocked(e.x+dx,e.y,e.r))e.x+=dx;if(!blocked(e.x,e.y+d
 function burst(x,y,col,n=6){for(let i=0;i<n;i++){let a=rand(0,Math.PI*2),v=rand(22,110);particles.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:rand(.18,.5),col,s:rand(2,4)})}}
 function reset(){
  player={x:480,y:300,r:8,hp:100,angle:0,speed:180,ammo:8,reserve:40,reload:0,cool:0,inv:0,ammoByWeapon:[8,6,2,12],reserveByWeapon:[40,36,18,48]};
- weaponIndex=0;knifeFlash=0;tauntFlash=0;tauntBubble={text:"",life:0,total:1.8};nearMisses=0;lastDodgeReaction=-99;lastMoraleToast=0;retreatMode=false;retreatUntil=0;lastStandTriggered=false;
+ weaponIndex=0;knifeFlash=0;tauntFlash=0;tauntBubble={text:"",life:0,total:1.8};nearMisses=0;lastDodgeReaction=0;lastMoraleToast=0;retreatMode=false;retreatUntil=0;lastStandTriggered=false;
  enemies=[];shots=[];hostile=[];pickups=[];particles=[];score=0;kills=0;wave=1;kits=0;spawnLeft=8;spawnClock=.7;intermission=0;clock=0;shake=0;healClock=5;ammoClock=9;
  decor=[];trees=[];
  for(let i=0;i<105;i++)decor.push({x:rand(5,W-5),y:rand(5,H-5),type:Math.floor(rand(0,4)),s:rand(3,11)});
@@ -68,99 +68,54 @@ function selectWeapon(i){if(!player)return;weaponIndex=(i+weaponDefs.length)%wea
 function reload(){if(!player||!running||paused)return;const w=weaponDefs[weaponIndex];if(player.reload<=0&&player.ammo<w.mag&&player.reserve>0){player.reload=weaponIndex===2?1.35:1.05;sfx('reload');ui.toast.textContent=`Reloading ${w.name}…`}}
 function fire(){if(!running||paused||!player||player.cool>0||player.reload>0)return;const w=weaponDefs[weaponIndex];if(player.ammo<=0){sfx('empty');reload();return}sfx(['rifle','revolver','shotgun','repeater'][weaponIndex]);player.ammo--;player.ammoByWeapon[weaponIndex]=player.ammo;player.cool=w.rate;const a=player.angle,pellets=w.pellets||1;for(let i=0;i<pellets;i++){const angle=a+(pellets===1?rand(-w.spread,w.spread):rand(-w.spread,w.spread));shots.push({x:player.x+Math.cos(angle)*13,y:player.y+Math.sin(angle)*13,vx:Math.cos(angle)*w.speed,vy:Math.sin(angle)*w.speed,life:.78,damage:w.damage})}burst(player.x+Math.cos(a)*14,player.y+Math.sin(a)*14,'#f5d79b',3);hud()}
 function knifeAttack(){if(!running||paused||!player||knifeFlash>0)return;sfx('knife');knifeFlash=.28;let target=null,best=42;for(const e of enemies){const d=Math.hypot(e.x-player.x,e.y-player.y);if(d<best&&hasLine(player.x,player.y,e.x,e.y)){best=d;target=e}}if(!target){ui.toast.textContent='Knife: get closer to an enemy.';return}target.hp-=3;target.hit=.18;burst(target.x,target.y,'#a83e38',5);ui.toast.textContent='Knife strike!';if(target.hp<=0){score+=target.officer?250:100;kills++;if(kills>=50)triggerMoraleRetreat();burst(target.x,target.y,'#a83e38',8);if(Math.random()<.16)pickup(Math.random()<.72?'ammo':'heal',target.x,target.y);enemies.splice(enemies.indexOf(target),1)}hud()}
-const trashTalkLines=['You suck!','Go away, you noob!','You couldn’t hit a barn!','Your whole army is scared of me!','Is that all you’ve got?','You call that shooting?','Come and get me, then!','I’m going to walk right past you!'];
-function npcComeback(line,e){const s=line.toLowerCase();if(s.includes('suck'))return ['Suck? I am NOT!','Oh, that’s it. I hate you!','I’m so mad right now!'];if(s.includes('noob')||s.includes('go away'))return ['Noob!? I’ll show you who’s boss!','I’m going to make sure you regret that!','Take that back, you little rascal!'];if(s.includes('barn')||s.includes('hit')||s.includes('shoot'))return ['Keep talking — see what happens!','I was adjusting my aim!','Stand still and say that again!'];if(s.includes('army')||s.includes('scared'))return ['Scared? We’ve got a whole regiment here!','You think you can take all of us?','Men, don’t let him get away with that!'];if(s.includes('all you')||s.includes('come and get'))return ['Gladly! I’m coming for you!','You asked for it, rebel!','Right, lads — let’s shut him up!'];if(s.includes('walk right'))return ['Not if I have anything to say about it!','Stop him! He’s trying to get through!','You’re not going anywhere!'];return ['You’ll pay for that!','I’ve had enough of you!','Keep running your mouth, rebel!']}
+const trashTalkLines=['You are a nigger!','Go away, you leftist!','You couldn’t hit a men!','Your whole army is scared of me!','Is that all you’ve got?','You call that shooting?','Come and get me, then!','I’m going to walk right past you!'];
+function npcComeback(line,e){const s=line.toLowerCase();if(s.includes('nigger'))return ['THAT IS RACIST!!','Oh, that’s it. I HATE YOU!!!!','EXCUSE ME?! SAY THAT AGAIN, SLOWLY!'];if(s.includes('leftist')||s.includes('go away'))return ['Leftist!? I’ll show you who’s boss!','I’m going to make sure you regret that!','IM SO MAD!'];if(s.includes('men')||s.includes('hit')||s.includes('shoot'))return ['IM VICTIM HELP ME','I was adjusting my aim!','Stand still and say that again!'];if(s.includes('army')||s.includes('scared'))return ['Scared? We’ve got a whole regiment here!','You think you can take all of us?','Men, don’t let him get away with that!'];if(s.includes('all you')||s.includes('come and get'))return ['Gladly! I’m coming for you!','You asked for it, rebel!','Right, lads — let’s shut him up!'];if(s.includes('walk right'))return ['Not if I have anything to say about it!','Stop him! He’s trying to get through!','You’re not going anywhere!'];return ['You’ll pay for that!','I’ve had enough of you!','Keep running your mouth, rebel!']}
 function trashTalk(){if(!running||paused||!player)return;sfx('taunt');tauntFlash=.9;const line=trashTalkLines[Math.floor(Math.random()*trashTalkLines.length)];tauntBubble={text:line,life:2,total:2};let riled=0,closest=null,closestD=Infinity;for(const e of enemies){const d=Math.hypot(e.x-player.x,e.y-player.y);if(d<410){if(d<closestD){closest=e;closestD=d}e.anger=Math.min(3,(e.anger||0)+1);e.angerTime=6+Math.random()*2;e.reaction=2.6;const replies=npcComeback(line,e);e.reactionText=replies[Math.floor(Math.random()*replies.length)];e.cool=Math.min(e.cool,.18);e.phase+=rand(1,2.5);riled++}}ui.toast.textContent=riled?`You yell, “${line}” — ${riled} Union soldier${riled===1?' reacts':'s react'}!`:`You yell, “${line}” Nobody is close enough to hear you.`}
 function hasLine(x1,y1,x2,y2){const d=Math.hypot(x2-x1,y2-y1),steps=Math.ceil(d/8);for(let i=1;i<steps;i++){let x=x1+(x2-x1)*i/steps,y=y1+(y2-y1)*i/steps;for(const o of structures)if(x>o.x&&x<o.x+o.w&&y>o.y&&y<o.y+o.h)return false;for(const t of trees)if(Math.hypot(x-t.x,y-t.y)<t.r*.6)return false}return true}
 function end(){running=false;paused=false;mouse.down=false;ui.overlay.style.display='flex';ui.title.textContent='SKIRMISH ENDED';ui.desc.textContent=`You survived to wave ${wave}, scored ${score.toLocaleString()} points, collected ${kits} first-aid kits, and tagged ${kills} Union soldiers. Try again to beat your score.`;ui.start.textContent='TRY AGAIN';ui.start.onclick=start}
-function moraleMessage(text){ui.toast.textContent=text;}
-function chooseEscapeTarget(e){
- const edges=[{x:18,y:e.y},{x:W-18,y:e.y},{x:e.x,y:18},{x:e.x,y:H-18}];
- edges.sort((a,b)=>Math.hypot(a.x-e.x,a.y-e.y)-Math.hypot(b.x-e.x,b.y-e.y));
- // Prefer an edge that is not directly blocked by cover.
- for(const p of edges){if(hasLine(e.x,e.y,p.x,p.y))return p;}
- return edges[0];
-}
-function beginRetreat(e, reason='morale'){
- if(e.retreating)return;
- e.retreating=true;e.retreatReason=reason;e.retreatTarget=chooseEscapeTarget(e);
- e.panic=rand(3.5,6.5);e.cool=999;e.reaction=3.2;
- e.reactionText=reason==='last'?
-  ['Nope! I’m getting out of here!','You’re not catching me!','I’m done with this fight!'][Math.floor(Math.random()*3)]:
-  ['Fall back!','We can’t hold this line!','Retreat! Move!','Get to the tree line!'][Math.floor(Math.random()*4)];
+function moraleMessage(text){
+ ui.toast.textContent=text;
 }
 function triggerMoraleRetreat(){
  if(retreatMode||kills<50)return;
- retreatMode=true;
- for(const e of enemies)beginRetreat(e,'morale');
- moraleMessage('MORALE BROKEN — Union soldiers are breaking formation and retreating!');
+ retreatMode=true;retreatUntil=clock+8;
+ for(const e of enemies){e.retreating=true;e.panic=rand(2.2,4.2);e.reaction=2.2;e.reactionText=['Fall back!','We can’t hold them!','Retreat! Get back!'][Math.floor(Math.random()*3)];}
+ moraleMessage('UNION MORALE BROKEN — surviving soldiers are retreating!');
  sfx('wave');
 }
 function dodgeReaction(){
  nearMisses++;
- // Reactions scale with consecutive close calls, rather than requiring an exact tiny collision ring.
- if(nearMisses>=3 && clock-lastDodgeReaction>2.2){
+ if(nearMisses>=5 && clock-lastDodgeReaction>5){
   lastDodgeReaction=clock;
-  const nearby=enemies.filter(e=>!e.retreating&&Math.hypot(e.x-player.x,e.y-player.y)<390);
-  if(nearby.length){
-   const e=nearby[Math.floor(Math.random()*nearby.length)];
-   e.reaction=3.1;
-   e.reactionText=nearMisses>=7?
-    ['He’s dodging every shot!','How is he still untouched?!','I can’t lead his movement!','That man can’t be hit!'][Math.floor(Math.random()*4)]:
-    ['That was a close one!','He just slipped past it!','Watch his feet!','He saw that coming!'][Math.floor(Math.random()*4)];
-   if(nearMisses>=7){
-    for(const ally of nearby){ally.reaction=Math.max(ally.reaction,2.8);ally.reactionText=['Impossible…','Keep your heads down!','I can’t hit him!','He dodges every shot!'][Math.floor(Math.random()*4)];}
-    moraleMessage('UNBELIEVABLE DODGING — the Union line is stunned!');
-    nearMisses=0;
-   }else moraleMessage('A Union soldier flinches: your dodging is throwing off their aim.');
-  }
+  const e=enemies.find(q=>Math.hypot(q.x-player.x,q.y-player.y)<330);
+  if(e){e.reaction=2.5;e.reactionText=['How did that miss?!','That was too close!','He’s impossible to hit!','Keep your heads down!'][Math.floor(Math.random()*4)];}
+  moraleMessage('The Union line looks stunned by your impossible dodging!');
+  nearMisses=0;
  }
 }
 function update(dt){
- if(!running||paused||!player)return;clock+=dt;player.cool=Math.max(0,player.cool-dt);player.inv=Math.max(0,player.inv-dt);knifeFlash=Math.max(0,knifeFlash-dt);tauntFlash=Math.max(0,tauntFlash-dt);tauntBubble.life=Math.max(0,tauntBubble.life-dt);
+ if(!running||paused||!player)return;clock+=dt;if(retreatMode&&clock>retreatUntil){retreatMode=false;for(const e of enemies)e.retreating=false;}player.cool=Math.max(0,player.cool-dt);player.inv=Math.max(0,player.inv-dt);knifeFlash=Math.max(0,knifeFlash-dt);tauntFlash=Math.max(0,tauntFlash-dt);tauntBubble.life=Math.max(0,tauntBubble.life-dt);
  if(player.reload>0){player.reload-=dt;if(player.reload<=0){player.reload=0;sfx('reloadDone');const w=weaponDefs[weaponIndex];const n=Math.min(w.mag-player.ammo,player.reserve);player.ammo+=n;player.reserve-=n;player.ammoByWeapon[weaponIndex]=player.ammo;player.reserveByWeapon[weaponIndex]=player.reserve;ui.toast.textContent='Reload complete.'}}
  let dx=(keys.d?1:0)-(keys.a?1:0),dy=(keys.s?1:0)-(keys.w?1:0),len=Math.hypot(dx,dy)||1;move(player,dx/len*player.speed*(keys.shift?1.35:1)*dt,dy/len*player.speed*(keys.shift?1.35:1)*dt);if(dx!==0||dy!==0){footstepClock-=dt;if(footstepClock<=0){sfx(keys.shift?'runstep':'footstep');footstepClock=keys.shift?.24:.36}}else footstepClock=0;player.angle=Math.atan2(mouse.y-player.y,mouse.x-player.x);if(mouse.down)fire();
  if(Math.random()<dt*.32&&particles.length<90){let ex=Math.random()<.5?rand(20,W-20):(Math.random()<.5?18:W-18);let ey=Math.random()<.5?rand(20,H-20):(Math.random()<.5?18:H-18);particles.push({x:ex,y:ey,vx:rand(-5,5),vy:rand(-12,-3),life:rand(.7,1.5),col:'#b7ad8b30',s:rand(2,5)})}if(spawnLeft>0){spawnClock-=dt;if(spawnClock<=0){spawnEnemy();spawnLeft--;spawnClock=Math.max(.32,1.05-wave*.035)}}else if(enemies.length===0){intermission+=dt;if(intermission>2.4){sfx('wave');wave++;spawnLeft=Math.min(7+wave*2,26);intermission=0;player.hp=Math.min(100,player.hp+8);player.reserve=Math.min(100,player.reserve+8);player.reserveByWeapon[weaponIndex]=player.reserve;ui.toast.textContent=`Wave ${wave} approaching. +8 health, +8 reserve ammo.`}}
  healClock-=dt;if(healClock<=0){if(pickups.filter(p=>p.type==='heal').length<2){pickup('heal');ui.toast.textContent='A first-aid kit marked + has appeared!'}healClock=rand(8,13)}
  ammoClock-=dt;if(ammoClock<=0){if(pickups.filter(p=>p.type==='ammo').length<2)pickup('ammo');ammoClock=rand(12,18)}
- const escaped=[];
  for(const e of enemies){e.cool-=dt;e.flash=Math.max(0,e.flash-dt);e.hit=Math.max(0,e.hit-dt);e.reaction=Math.max(0,(e.reaction||0)-dt);e.angerTime=Math.max(0,(e.angerTime||0)-dt);if(e.angerTime<=0)e.anger=Math.max(0,(e.anger||0)-dt*.65);let vx=player.x-e.x,vy=player.y-e.y,d=Math.hypot(vx,vy)||1;let temper=1+(e.anger||0)*.09;
  const lastSoldier=enemies.length===1;
- if(lastSoldier&&d<220&&!e.retreating){beginRetreat(e,'last');moraleMessage('The last Union soldier breaks and runs when you close in!');}
- if(e.retreating){
-  e.panic-=dt;e.phase+=dt;
-  const target=e.retreatTarget||chooseEscapeTarget(e);e.retreatTarget=target;
-  let tx=target.x-e.x,ty=target.y-e.y,td=Math.hypot(tx,ty)||1;
-  let sx=tx/td,sy=ty/td,step=e.speed*2.15*dt;
-  // If cover blocks the direct route, try lateral escape steps rather than running in place.
-  if(blocked(e.x+sx*step,e.y+sy*step,e.r)){
-   const sideA={x:-sy,y:sx},sideB={x:sy,y:-sx};
-   const aOK=!blocked(e.x+sideA.x*step,e.y+sideA.y*step,e.r);
-   const bOK=!blocked(e.x+sideB.x*step,e.y+sideB.y*step,e.r);
-   if(aOK||bOK){const side=(aOK&&bOK?(Math.random()<.5?sideA:sideB):(aOK?sideA:sideB));sx=side.x;sy=side.y;}
-  }
-  move(e,sx*step,sy*step);
-  if(e.x<25||e.x>W-25||e.y<25||e.y>H-25||e.panic<=0)escaped.push(e);
- }else{
-  if(d>150)move(e,vx/d*e.speed*temper*dt,vy/d*e.speed*temper*dt);else{e.phase+=dt;move(e,vx/d*e.speed*temper*.2*dt+Math.cos(e.phase*2)*17*dt,vy/d*e.speed*temper*.2*dt+Math.sin(e.phase*2)*17*dt)}
-  if(d<365&&e.cool<=0&&hasLine(e.x,e.y,player.x,player.y)){sfx('enemy');e.cool=rand(1.15,2)*(e.officer?.82:1)/(1+(e.anger||0)*.18);e.flash=.18;let a=Math.atan2(player.y-e.y,player.x-e.x)+rand(-.065,.065),v=e.officer?225:245;hostile.push({x:e.x,y:e.y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:1.8,damage:e.officer?10:7})}
- }}
- for(const e of escaped){const i=enemies.indexOf(e);if(i!==-1){burst(e.x,e.y,'#b9c4a1',4);enemies.splice(i,1);}}
- if(retreatMode&&enemies.length===0){retreatMode=false;ui.toast.textContent='The Union survivors have escaped. The field falls quiet…';}
+ const fleeing=retreatMode||e.retreating||(lastSoldier&&d<210);
+ if(fleeing){e.phase+=dt;move(e,-vx/d*e.speed*(lastSoldier?1.9:1.55)*dt+Math.cos(e.phase*2)*10*dt,-vy/d*e.speed*(lastSoldier?1.9:1.55)*dt+Math.sin(e.phase*2)*10*dt);if(lastSoldier&&d<240&&e.reaction<=0){e.reaction=2.1;e.reactionText=['No! Stay back!','I’m not dying here!','Keep away!'][Math.floor(Math.random()*3)]}}
+ else if(d>150)move(e,vx/d*e.speed*temper*dt,vy/d*e.speed*temper*dt);else{e.phase+=dt;move(e,vx/d*e.speed*temper*.2*dt+Math.cos(e.phase*2)*17*dt,vy/d*e.speed*temper*.2*dt+Math.sin(e.phase*2)*17*dt)}
+ if(!fleeing&&d<365&&e.cool<=0&&hasLine(e.x,e.y,player.x,player.y)){sfx('enemy');e.cool=rand(1.15,2)*(e.officer?.82:1)/(1+(e.anger||0)*.18);e.flash=.18;let a=Math.atan2(player.y-e.y,player.x-e.x)+rand(-.065,.065),v=e.officer?225:245;hostile.push({x:e.x,y:e.y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:1.8,damage:e.officer?10:7})}}
  for(let i=shots.length-1;i>=0;i--){let b=shots[i];b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;let gone=b.life<=0||b.x<0||b.x>W||b.y<0||b.y>H;for(const o of structures)if(b.x>o.x&&b.x<o.x+o.w&&b.y>o.y&&b.y<o.y+o.h)gone=true;for(const t of trees)if(Math.hypot(b.x-t.x,b.y-t.y)<t.r*.55)gone=true;
  if(!gone)for(let j=enemies.length-1;j>=0;j--){let e=enemies[j];if(Math.hypot(b.x-e.x,b.y-e.y)<e.r+3){sfx('hit');e.hp-=(b.damage||1);e.hit=.13;burst(b.x,b.y,'#a83e38',4);gone=true;if(e.hp<=0){burst(e.x,e.y,'#bfc9a5',7);score+=e.officer?250:100;kills++;if(kills>=50)triggerMoraleRetreat();if(Math.random()<.16)pickup(Math.random()<.72?'ammo':'heal',e.x,e.y);enemies.splice(j,1)}break}}if(gone)shots.splice(i,1)}
- for(let i=hostile.length-1;i>=0;i--){let b=hostile[i];const oldX=b.x,oldY=b.y;b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;let gone=b.life<=0||b.x<0||b.x>W||b.y<0||b.y>H;for(const o of structures)if(b.x>o.x&&b.x<o.x+o.w&&b.y>o.y&&b.y<o.y+o.h)gone=true;for(const t of trees)if(Math.hypot(b.x-t.x,b.y-t.y)<t.r*.5)gone=true;const segX=b.x-oldX,segY=b.y-oldY,segLen2=segX*segX+segY*segY;
- const t=segLen2?clamp(((player.x-oldX)*segX+(player.y-oldY)*segY)/segLen2,0,1):0;
- const closestX=oldX+segX*t,closestY=oldY+segY*t;
- const closestDistance=Math.hypot(closestX-player.x,closestY-player.y);
- const playerDistance=Math.hypot(b.x-player.x,b.y-player.y);
- if(!gone&&!b.dodgeCounted&&closestDistance<player.r+22&&closestDistance>=player.r+5){b.dodgeCounted=true;dodgeReaction();}
+ for(let i=hostile.length-1;i>=0;i--){let b=hostile[i];b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;let gone=b.life<=0||b.x<0||b.x>W||b.y<0||b.y>H;for(const o of structures)if(b.x>o.x&&b.x<o.x+o.w&&b.y>o.y&&b.y<o.y+o.h)gone=true;for(const t of trees)if(Math.hypot(b.x-t.x,b.y-t.y)<t.r*.5)gone=true;const playerDistance=Math.hypot(b.x-player.x,b.y-player.y);
+ if(!gone&&playerDistance<player.r+15&&playerDistance>=player.r+4){dodgeReaction()}
  if(!gone&&playerDistance<player.r+4){gone=true;if(player.inv<=0){sfx('hit');player.hp-=b.damage;player.inv=.45;shake=4;burst(player.x,player.y,'#d9a17c',5);if(player.hp<=0){player.hp=0;hud();end()}}}if(gone)hostile.splice(i,1)}
  for(let i=pickups.length-1;i>=0;i--){let p=pickups[i];p.life-=dt;p.bob+=dt*4;if(Math.hypot(p.x-player.x,p.y-player.y)<20){sfx('pickup');if(p.type==='heal'){player.hp=Math.min(100,player.hp+30);kits++;ui.toast.textContent='FIRST-AID KIT collected: +30 health!';burst(p.x,p.y,'#f6f1d9',12)}else{player.reserve=Math.min(weaponDefs[weaponIndex].reserve,player.reserve+26);player.ammo=Math.min(weaponDefs[weaponIndex].mag,player.ammo+2);player.reserveByWeapon[weaponIndex]=player.reserve;player.ammoByWeapon[weaponIndex]=player.ammo;ui.toast.textContent='AMMO SATCHEL collected!';burst(p.x,p.y,'#d6c18a',10)}pickups.splice(i,1)}else if(p.life<=0)pickups.splice(i,1)}
  for(let i=particles.length-1;i>=0;i--){let p=particles[i];p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.93;p.vy*=.93;p.life-=dt;if(p.life<=0)particles.splice(i,1)}shake=Math.max(0,shake-dt*18);hud()
 }
 function drawFlag(x,y,s){const h=s*.62;rect(x,y,s,h,'#b52b32');c.save();c.beginPath();c.rect(x,y,s,h);c.clip();c.strokeStyle='#eee8dc';c.lineWidth=s*.27;c.beginPath();c.moveTo(x-s*.08,y-h*.08);c.lineTo(x+s*1.08,y+h*1.08);c.moveTo(x+s*1.08,y-h*.08);c.lineTo(x-s*.08,y+h*1.08);c.stroke();c.strokeStyle='#263b76';c.lineWidth=s*.16;c.beginPath();c.moveTo(x-s*.08,y-h*.08);c.lineTo(x+s*1.08,y+h*1.08);c.moveTo(x+s*1.08,y-h*.08);c.lineTo(x-s*.08,y+h*1.08);c.stroke();for(let i=0;i<5;i++){let t=.13+i*.185;circle(x+s*t,y+h*t,Math.max(1.2,s*.023),'#fff5dc');circle(x+s*(1-t),y+h*t,Math.max(1.2,s*.023),'#fff5dc')}c.restore();rect(x-2,y+h,s+4,3,'#463b2d')}
-function drawSoldier(e){let x=Math.round(e.x),y=Math.round(e.y);if((e.anger||0)>0.25){circle(x,y-2,e.r+7,`rgba(191,54,37,${Math.min(.25,.07+(e.anger||0)*.05)})`)}if(e.reaction>0){c.save();c.font='bold 10px monospace';const msg=e.reactionText||'Hey!';const words=msg.split(' '),lines=[];let part='';for(const word of words){const test=part?part+' '+word:word;if(test.length>22&&part){lines.push(part);part=word}else part=test}if(part)lines.push(part);const shown=lines.slice(0,2),bw=Math.min(W-12,Math.max(88,...shown.map(t=>c.measureText(t).width))+14),bh=shown.length*12+10,bx=clamp(x-bw/2,4,W-bw-4),by=y>65?y-43:Math.min(H-bh-4,y+25);c.fillStyle='#f3e7ce';c.strokeStyle='#6e3029';c.lineWidth=2;c.fillRect(bx,by,bw,bh);c.strokeRect(bx,by,bw,bh);c.fillStyle='#4a2823';shown.forEach((t,i)=>c.fillText(t,bx+(bw-c.measureText(t).width)/2,by+13+i*12));c.restore()}circle(x,y+5,e.r+3,'#10171099');rect(x-6,y-8,12,15,e.hit?'#e2d7b4':'#4e6d9a');rect(x-8,y-3,4,9,'#3e5980');rect(x+4,y-3,4,9,'#3e5980');rect(x-5,y+6,4,7,'#343a37');rect(x+2,y+6,4,7,'#343a37');rect(x-6,y-14,12,7,'#35465e');rect(x-8,y-12,16,3,'#283a4c');let a=Math.atan2(player.y-e.y,player.x-e.x);c.save();c.translate(x,y-2);c.rotate(a);rect(0,-2,14,4,'#272c29');rect(10,-3,7,2,'#b5ad96');c.restore();if(e.officer){rect(x-12,y-18,24,3,'#d8c68f');rect(x-10,y-21,20,3,'#4c5c75')}if(e.hp<e.max){rect(x-11,y-24,22,3,'#452f28');rect(x-11,y-24,22*e.hp/e.max,3,'#dfc16f')}if(e.flash>0)circle(x,y,15,'#f7dc8c30')}
+function drawSoldier(e){let x=Math.round(e.x),y=Math.round(e.y);if((e.anger||0)>0.25){circle(x,y-2,e.r+7,`rgba(191,54,37,${Math.min(.25,.07+(e.anger||0)*.05)})`);if(e.reaction>0){c.save();c.font='bold 10px monospace';const msg=e.reactionText||'Hey!';const words=msg.split(' '),lines=[];let part='';for(const word of words){const test=part?part+' '+word:word;if(test.length>22&&part){lines.push(part);part=word}else part=test}if(part)lines.push(part);const shown=lines.slice(0,2),bw=Math.min(W-12,Math.max(88,...shown.map(t=>c.measureText(t).width))+14),bh=shown.length*12+10,bx=clamp(x-bw/2,4,W-bw-4),by=y>65?y-43:Math.min(H-bh-4,y+25);c.fillStyle='#f3e7ce';c.strokeStyle='#6e3029';c.lineWidth=2;c.fillRect(bx,by,bw,bh);c.strokeRect(bx,by,bw,bh);c.fillStyle='#4a2823';shown.forEach((t,i)=>c.fillText(t,bx+(bw-c.measureText(t).width)/2,by+13+i*12));c.restore()}}circle(x,y+5,e.r+3,'#10171099');rect(x-6,y-8,12,15,e.hit?'#e2d7b4':'#4e6d9a');rect(x-8,y-3,4,9,'#3e5980');rect(x+4,y-3,4,9,'#3e5980');rect(x-5,y+6,4,7,'#343a37');rect(x+2,y+6,4,7,'#343a37');rect(x-6,y-14,12,7,'#35465e');rect(x-8,y-12,16,3,'#283a4c');let a=Math.atan2(player.y-e.y,player.x-e.x);c.save();c.translate(x,y-2);c.rotate(a);rect(0,-2,14,4,'#272c29');rect(10,-3,7,2,'#b5ad96');c.restore();if(e.officer){rect(x-12,y-18,24,3,'#d8c68f');rect(x-10,y-21,20,3,'#4c5c75')}if(e.hp<e.max){rect(x-11,y-24,22,3,'#452f28');rect(x-11,y-24,22*e.hp/e.max,3,'#dfc16f')}if(e.flash>0)circle(x,y,15,'#f7dc8c30')}
 function drawTauntBubble(){if(!player||tauntBubble.life<=0||!tauntBubble.text)return;const text=tauntBubble.text;const maxChars=27;const words=text.split(' '),lines=[];let line='';for(const word of words){const next=line?line+' '+word:word;if(next.length>maxChars&&line){lines.push(line);line=word}else line=next}if(line)lines.push(line);c.save();c.font='bold 11px monospace';const padX=9,padY=7,lineH=13;let bw=Math.min(270,Math.max(110,...lines.map(s=>c.measureText(s).width))+padX*2),bh=lines.length*lineH+padY*2;let bx=clamp(player.x-bw/2,8,W-bw-8),by=player.y-46-bh;if(by<8)by=Math.min(H-bh-18,player.y+28);const alpha=clamp(tauntBubble.life/.22,0,1);c.globalAlpha=alpha;c.fillStyle='#f0e6c9';c.strokeStyle='#2b3025';c.lineWidth=3;c.beginPath();c.rect(Math.round(bx),Math.round(by),Math.round(bw),Math.round(bh));c.fill();c.stroke();c.fillStyle='#f0e6c9';c.beginPath();c.moveTo(player.x-5,by+bh-1);c.lineTo(player.x+4,by+bh-1);c.lineTo(player.x,by+bh+7);c.closePath();c.fill();c.strokeStyle='#2b3025';c.lineWidth=2;c.beginPath();c.moveTo(player.x-5,by+bh-1);c.lineTo(player.x,by+bh+7);c.lineTo(player.x+4,by+bh-1);c.stroke();c.fillStyle='#272d23';lines.forEach((s,i)=>c.fillText(s,bx+(bw-c.measureText(s).width)/2,by+padY+10+i*lineH));c.restore()}
 function drawHero(){let x=Math.round(player.x),y=Math.round(player.y);if(player.inv>0&&Math.floor(clock*18)%2===0)return;circle(x,y+6,13,'#10150faa');rect(x-7,y-8,14,16,'#858d6b');rect(x-9,y-3,4,9,'#687555');rect(x+5,y-3,4,9,'#687555');rect(x-6,y+7,5,7,'#493d31');rect(x+2,y+7,5,7,'#493d31');rect(x-6,y-14,12,8,'#d2b88a');rect(x-8,y-12,16,3,'#8e7b56');rect(x-7,y-15,14,2,'#b4a06f');c.save();c.translate(x,y-1);c.rotate(player.angle);rect(1,-3,17,5,'#2a3028');rect(12,-4,8,2,'#aaa58c');c.restore();c.strokeStyle='#f1e8c9';c.lineWidth=1;c.beginPath();c.arc(mouse.x,mouse.y,7,0,Math.PI*2);c.moveTo(mouse.x-11,mouse.y);c.lineTo(mouse.x-4,mouse.y);c.moveTo(mouse.x+4,mouse.y);c.lineTo(mouse.x+11,mouse.y);c.moveTo(mouse.x,mouse.y-11);c.lineTo(mouse.x,mouse.y-4);c.moveTo(mouse.x,mouse.y+4);c.lineTo(mouse.x,mouse.y+11);c.stroke()}
 function draw(){
@@ -173,7 +128,7 @@ function draw(){
  rect(70,48,4,82,'#b6a17a');drawFlag(74,51,65);txt('FIELD STANDARD',48,145,9,'#d5c89c');
  for(const p of pickups){let bob=Math.sin(p.bob)*2;if(p.type==='heal'){rect(p.x-11,p.y-11+bob,22,22,'#dedecb');rect(p.x-8,p.y-8+bob,16,16,'#f7f4df');rect(p.x-2,p.y-7+bob,4,14,'#d45149');rect(p.x-7,p.y-2+bob,14,4,'#d45149')}else{rect(p.x-10,p.y-8,20,16,'#b9a16c');rect(p.x-7,p.y-5,14,10,'#5c6345');txt('A',p.x-4,p.y+4,9,'#f6e8b8')}}
  for(const b of shots){circle(b.x,b.y,2.5,'#fff0bc');rect(b.x-5,b.y-1,8,2,'#e6c27b')}for(const b of hostile){circle(b.x,b.y,3,'#e9a17a');rect(b.x-3,b.y-1,6,2,'#f5d4a2')}
- for(const e of enemies){drawSoldier(e);if(e.retreating){txt('!',e.x-3,e.y-20,13,'#f2d78b');txt('RETREAT',e.x-25,e.y-29,8,'#f2b7a0')}}drawHero();drawTauntBubble();for(const p of particles){c.globalAlpha=clamp(p.life*3,0,1);rect(p.x,p.y,p.s,p.s,p.col);c.globalAlpha=1}
+ for(const e of enemies){drawSoldier(e);if(retreatMode||e.retreating||enemies.length===1){txt('!',e.x-3,e.y-20,13,'#f2d78b');if(retreatMode||e.retreating)txt('RETREAT',e.x-25,e.y-29,8,'#f2b7a0')}}drawHero();drawTauntBubble();for(const p of particles){c.globalAlpha=clamp(p.life*3,0,1);rect(p.x,p.y,p.s,p.s,p.col);c.globalAlpha=1}
  const g=c.createRadialGradient(W/2,H/2,100,W/2,H/2,620);g.addColorStop(0,'#00000000');g.addColorStop(1,'#08110b88');c.fillStyle=g;c.fillRect(0,0,W,H);
  if(spawnLeft===0&&enemies.length===0&&running)txt('CLEARING SECURED',W/2-76,34,14,'#e4d4a1');if(running){rect(12,H-27,235,18,'#101a13cc');txt(weaponDefs[weaponIndex].name,20,H-14,10,'#e3cf98');if(knifeFlash>0)txt('KNIFE!',W/2-20,H-24,13,'#d97a69');if(tauntFlash>0)txt('YOU HEARD ME!',W/2-50,54,11,'#e4d4a1')}c.restore()
 }
