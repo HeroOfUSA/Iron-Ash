@@ -119,26 +119,27 @@ function triggerMoraleRetreat(){
  sfx('wave');
 }
 function dodgeReaction(){
- if(dodgeReactionPlayed)return;
+ // Count every genuine near-miss, then let soldiers react repeatedly during sustained dodging.
  nearMisses++;
- // Reactions scale with consecutive close calls, rather than requiring an exact tiny collision ring.
- if(nearMisses>=3 && clock-lastDodgeReaction>2.2){
-  dodgeReactionPlayed=true;
-  lastDodgeReaction=clock;
-  const nearby=enemies.filter(e=>!e.retreating&&Math.hypot(e.x-player.x,e.y-player.y)<390);
-  if(nearby.length){
-   const e=nearby[Math.floor(Math.random()*nearby.length)];
-   e.reaction=3.1;
-   e.reactionText=nearMisses>=7?
-    ['He’s dodging every shot!','How is he still untouched?!','I can’t lead his movement!','That man can’t be hit!'][Math.floor(Math.random()*4)]:
-    ['That was a close one!','He just slipped past it!','Watch his feet!','He saw that coming!'][Math.floor(Math.random()*4)];
-   if(nearMisses>=7){
-    for(const ally of nearby){ally.reaction=Math.max(ally.reaction,2.8);ally.reactionText='He dodged it!';}
-    moraleMessage('UNBELIEVABLE DODGING — the Union line is stunned!');
-    nearMisses=0;
-   }else moraleMessage('A Union soldier flinches: your dodging is throwing off their aim.');
-  }
+ if(nearMisses<2 || clock-lastDodgeReaction<1.35)return;
+ const nearby=enemies.filter(e=>!e.retreating&&Math.hypot(e.x-player.x,e.y-player.y)<430);
+ if(!nearby.length)return;
+ lastDodgeReaction=clock;
+ const stunned=nearMisses>=5;
+ const reactions=stunned?
+  ['IMPOSSIBLE!','How is he dodging everything?!','That’s impossible! I can’t hit him!','He’s avoiding every shot!']:
+  ['He dodged it!','He just slipped past it!','Watch his feet!','He saw that coming!','I nearly had him!'];
+ const count=stunned?nearby.length:Math.min(2,nearby.length);
+ const chosen=nearby.slice().sort(()=>Math.random()-.5).slice(0,count);
+ for(const e of chosen){
+  e.reaction=Math.max(e.reaction,stunned?3.4:2.6);
+  e.reactionText=reactions[Math.floor(Math.random()*reactions.length)];
  }
+ if(stunned){
+  for(const ally of nearby){ally.reaction=Math.max(ally.reaction,3.2);ally.reactionText=['IMPOSSIBLE!','He dodged it!','I can’t hit him!'][Math.floor(Math.random()*3)];}
+  moraleMessage('IMPOSSIBLE DODGING — the Union line is stunned!');
+  nearMisses=0;
+ }else moraleMessage('A Union soldier flinches — your dodging is throwing off their aim.');
 }
 function update(dt){
  if(!running||paused||!player)return;clock+=dt;player.cool=Math.max(0,player.cool-dt);player.inv=Math.max(0,player.inv-dt);knifeFlash=Math.max(0,knifeFlash-dt);tauntFlash=Math.max(0,tauntFlash-dt);tauntBubble.life=Math.max(0,tauntBubble.life-dt);
@@ -224,7 +225,7 @@ function update(dt){
  const closestDistance=Math.hypot(closestX-player.x,closestY-player.y);
  const playerDistance=Math.hypot(b.x-player.x,b.y-player.y);
  if(!gone&&!b.dodgeCounted&&closestDistance<player.r+22&&closestDistance>=player.r+5){b.dodgeCounted=true;dodgeReaction();}
- if(!gone&&playerDistance<player.r+4){gone=true;nearMisses=0;dodgeReactionPlayed=false;if(player.inv<=0){sfx('hit');player.hp-=b.damage;player.inv=.45;shake=4;burst(player.x,player.y,'#d9a17c',5);if(player.hp<=0){player.hp=0;hud();end()}}}if(gone)hostile.splice(i,1)}
+ if(!gone&&playerDistance<player.r+4){gone=true;if(player.inv<=0){nearMisses=0;dodgeReactionPlayed=false;sfx('hit');player.hp-=b.damage;player.inv=.45;shake=4;burst(player.x,player.y,'#d9a17c',5);if(player.hp<=0){player.hp=0;hud();end()}}}if(gone)hostile.splice(i,1)}
  for(let i=pickups.length-1;i>=0;i--){let p=pickups[i];p.life-=dt;p.bob+=dt*4;if(Math.hypot(p.x-player.x,p.y-player.y)<20){sfx('pickup');if(p.type==='heal'){player.hp=Math.min(100,player.hp+30);kits++;ui.toast.textContent='FIRST-AID KIT collected: +30 health!';burst(p.x,p.y,'#f6f1d9',12)}else{player.reserve=Math.min(weaponDefs[weaponIndex].reserve,player.reserve+26);player.ammo=Math.min(weaponDefs[weaponIndex].mag,player.ammo+2);player.reserveByWeapon[weaponIndex]=player.reserve;player.ammoByWeapon[weaponIndex]=player.ammo;ui.toast.textContent='AMMO SATCHEL collected!';burst(p.x,p.y,'#d6c18a',10)}pickups.splice(i,1)}else if(p.life<=0)pickups.splice(i,1)}
  for(let i=particles.length-1;i>=0;i--){let p=particles[i];p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.93;p.vy*=.93;p.life-=dt;if(p.life<=0)particles.splice(i,1)}shake=Math.max(0,shake-dt*18);hud()
 }
