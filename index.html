@@ -81,13 +81,6 @@ function trashTalk(){if(!running||paused||!player)return;sfx('taunt');tauntFlash
 function hasLine(x1,y1,x2,y2){const d=Math.hypot(x2-x1,y2-y1),steps=Math.ceil(d/8);for(let i=1;i<steps;i++){let x=x1+(x2-x1)*i/steps,y=y1+(y2-y1)*i/steps;for(const o of structures)if(x>o.x&&x<o.x+o.w&&y>o.y&&y<o.y+o.h)return false;for(const t of trees)if(Math.hypot(x-t.x,y-t.y)<t.r*.6)return false}return true}
 function end(){running=false;paused=false;mouse.down=false;const saved=saveRecord();ui.overlay.style.display='flex';ui.title.textContent='SKIRMISH ENDED';ui.desc.textContent=`Peter survived to wave ${wave}, scored ${score.toLocaleString()} points, collected ${kits} first-aid kits, and tagged ${kills} Union soldiers. ${saved?'Your record has been saved locally.':'Enter a player name on the next run to save a record.'}`;ui.start.textContent='TRY AGAIN';ui.start.onclick=start;renderRecords()}
 function moraleMessage(text){ui.toast.textContent=text;}
-function chooseEscapeTarget(e){
- const edges=[{x:18,y:e.y},{x:W-18,y:e.y},{x:e.x,y:18},{x:e.x,y:H-18}];
- edges.sort((a,b)=>Math.hypot(a.x-e.x,a.y-e.y)-Math.hypot(b.x-e.x,b.y-e.y));
- // Prefer an edge that is not directly blocked by cover.
- for(const p of edges){if(hasLine(e.x,e.y,p.x,p.y))return p;}
- return edges[0];
-}
 function chooseAmbushCover(e){
  const candidates=[];
  for(const t of trees){for(let i=0;i<8;i++){const a=i*Math.PI/4,x=t.x+Math.cos(a)*(t.r+20),y=t.y+Math.sin(a)*(t.r+20),pd=Math.hypot(x-player.x,y-player.y);if(x>18&&x<W-18&&y>18&&y<H-18&&pd>72&&pd<260&&!blocked(x,y,e.r)&&!hasLine(x,y,player.x,player.y))candidates.push({x,y,score:Math.hypot(x-e.x,y-e.y)+pd*.12})}}
@@ -96,11 +89,14 @@ function chooseAmbushCover(e){
 }
 function beginRetreat(e, reason='morale'){
  if(e.retreating)return;
- e.retreating=true;e.retreatReason=reason;e.retreatTarget=chooseEscapeTarget(e);
- e.panic=rand(3.5,6.5);e.cool=999;e.reaction=3.2;
+ // Tactical retreat: move to nearby cover, then return to the fight instead of
+ // sprinting off the edge of the map and disappearing.
+ e.retreating=true;e.retreatReason=reason;e.retreatTarget=chooseAmbushCover(e);
+ e.panic=rand(2.8,4.6);e.cool=Math.min(e.cool,.35);e.reaction=3.2;
+ if(reason==='last')e.lastFallbackUsed=true;
  e.reactionText=reason==='last'?
-  ['Nope! I’m getting out of here!','You’re not catching me!','I’m done with this fight!'][Math.floor(Math.random()*3)]:
-  ['Fall back!','We can’t hold this line!','Retreat! Move!','Get to the tree line!'][Math.floor(Math.random()*4)];
+  ['Fall back! Find cover!','I need some distance!','Get behind something!'][Math.floor(Math.random()*3)]:
+  ['Fall back!','Take cover!','Pull back to the trees!','Regroup behind cover!'][Math.floor(Math.random()*4)];
 }
 function triggerMoraleRetreat(){
  if(retreatMode||kills<50)return;
@@ -141,13 +137,13 @@ function update(dt){
  // A lone enemy is only allowed to flee after the wave has actually finished spawning
  // and the player has had time to engage; the first enemy of a new wave must fight.
  const lastSoldier=spawnLeft===0&&enemies.length===1&&clock>8;
- if(lastSoldier&&d<150&&!e.retreating){beginRetreat(e,'last');moraleMessage('The last Union soldier breaks and runs when you close in!');}
+ if(lastSoldier&&d<150&&!e.retreating&&!e.lastFallbackUsed){beginRetreat(e,'last');moraleMessage('The last Union soldier falls back to cover instead of fleeing!');}
  if(e.retreating){
   e.panic-=dt;e.phase+=dt;
-  const target=e.retreatTarget||chooseEscapeTarget(e);e.retreatTarget=target;
+  const target=e.retreatTarget||chooseAmbushCover(e);e.retreatTarget=target;
   let tx=target.x-e.x,ty=target.y-e.y,td=Math.hypot(tx,ty)||1;
-  let sx=tx/td,sy=ty/td,step=e.speed*2.15*dt;
-  // If cover blocks the direct route, try lateral escape steps rather than running in place.
+  let sx=tx/td,sy=ty/td,step=e.speed*1.75*dt;
+  // Use lateral steps around obstacles; this is a short tactical fallback, not an escape route.
   if(blocked(e.x+sx*step,e.y+sy*step,e.r)){
    const sideA={x:-sy,y:sx},sideB={x:sy,y:-sx};
    const aOK=!blocked(e.x+sideA.x*step,e.y+sideA.y*step,e.r);
@@ -155,7 +151,10 @@ function update(dt){
    if(aOK||bOK){const side=(aOK&&bOK?(Math.random()<.5?sideA:sideB):(aOK?sideA:sideB));sx=side.x;sy=side.y;}
   }
   move(e,sx*step,sy*step);
-  if(e.x<25||e.x>W-25||e.y<25||e.y>H-25||e.panic<=0)escaped.push(e);
+  if(Math.hypot(e.x-target.x,e.y-target.y)<22||e.panic<=0){
+   e.retreating=false;e.retreatTarget=null;e.cool=Math.min(e.cool,.25);e.reaction=1.6;
+   e.reactionText='Hold here! Keep firing!';
+  }
  }else if(e.ambusher){
   // Ambushers use trees and structures as cover, fire when they have a clear shot,
   // and reposition quickly when the player closes in instead of fleeing the map.
