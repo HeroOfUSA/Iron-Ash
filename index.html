@@ -72,6 +72,8 @@ function blockedObstacles(x,y,r){for(const o of structures)if(x+r>o.x&&x-r<o.x+o
 function blocked(x,y,r){if(x<r+7||x>W-r-7||y<r+7||y>H-r-7)return true;return blockedObstacles(x,y,r)}
 function move(e,dx,dy){if(!blocked(e.x+dx,e.y,e.r))e.x+=dx;if(!blocked(e.x,e.y+dy,e.r))e.y+=dy}
 function moveFleeing(e,dx,dy){
+ // Fleeing soldiers may cross the map boundary, but buildings and trees remain solid.
+ // Try the intended direction first, then slide along nearby obstacles instead of clipping through them.
  const candidates=[{x:dx,y:dy},{x:dx,y:0},{x:0,y:dy}];
  const d=Math.hypot(dx,dy)||1,ux=dx/d,uy=dy/d,step=Math.hypot(dx,dy);
  candidates.push({x:(ux-uy*.8)*step,y:(uy+ux*.8)*step},{x:(ux+uy*.8)*step,y:(uy-ux*.8)*step});
